@@ -1,80 +1,64 @@
 import simplegui
 
-# ── globals
-elapsed   = 0        # tenths of a second
+# Global state
+time_val  = 0     # tenths of a second (integer)
 running   = False
-attempts  = 0
-precise   = 0        # stopped exactly on a whole second
+stops     = 0
+successes = 0
 
-# ── format helper 
-def format(t):
-    d   =  t % 10
-    s   = (t // 10) % 60
-    m   =  t // 600
-    return str(m) + ":" + str(s // 10) + str(s % 10) + "." + str(d)
+# --- Helper: format t (tenths) as A:BC.D ---
+def format_time(t):
+    tenths  = t % 10
+    total_s = t // 10
+    secs    = total_s % 60
+    mins    = total_s // 60
+    return str(mins) + ":" + str(secs // 10) + str(secs % 10) + "." + str(tenths)
 
-# ── button handlers 
-def btn_start():
+# --- Timer handler ---
+def tick():
+    global time_val
+    time_val += 1
+
+# --- Button handlers ---
+def start():
     global running
-    running = True
-    clock.start()
-
-def btn_stop():
-    global running, attempts, precise
     if not running:
-        return
-    running = False
-    clock.stop()
-    attempts += 1
-    if elapsed % 10 == 0:
-        precise += 1
+        running = True
+        timer.start()
 
-def btn_reset():
-    global elapsed, running, attempts, precise
-    clock.stop()
-    running  = False
-    elapsed  = 0
-    attempts = 0
-    precise  = 0
+def stop():
+    global running, stops, successes
+    if running:
+        timer.stop()
+        running = False
+        stops += 1
+        if time_val % 10 == 0:
+            successes += 1
 
-# ── timer 
-def update():
-    global elapsed
-    elapsed += 1
+def reset():
+    global time_val, running, stops, successes
+    timer.stop()
+    running   = False
+    time_val  = 0
+    stops     = 0
+    successes = 0
 
-# ── draw 
+# --- Draw handler ---
 def draw(canvas):
-    # background grid lines for style
-    for y in range(0, 250, 50):
-        canvas.draw_line((0, y), (300, y), 1, "#1a3a1a")
+    # Main time display - centred
+    canvas.draw_text(format_time(time_val), [110, 165], 60, "White", "monospace")
+    # Score - upper right
+    canvas.draw_text(str(successes) + "/" + str(stops), [310, 40], 28, "Green", "monospace")
 
-    # status indicator
-    status_color = "lime" if running else "red"
-    status_label = "● RUN" if running else "■ STP"
-    canvas.draw_text(status_label, (10, 22), 16, status_color, "monospace")
-
-    # score — top right
-    score_color = "yellow" if precise > 0 else "white"
-    canvas.draw_text(str(precise) + "/" + str(attempts), (200, 22), 20, score_color, "monospace")
-
-    # main time — centred
-    canvas.draw_text(format(elapsed), (38, 140), 52, "white", "monospace")
-
-    # thin divider line
-    canvas.draw_line((20, 155), (280, 155), 1, "#336633")
-
-    # best-of note
-    canvas.draw_text("hit a whole second!", (60, 185), 14, "#669966", "monospace")
-
-# ── frame setup 
-frame = simplegui.create_frame("Stopwatch: The Game", 300, 250)
-frame.set_canvas_background("#0d1f0d")
-frame.add_button("Start", btn_start, 100)
-frame.add_button("Stop",  btn_stop,  100)
-frame.add_button("Reset", btn_reset, 100)
+# --- Frame setup ---
+frame = simplegui.create_frame("Stopwatch: The Game", 400, 300)
+frame.set_canvas_background("Black")
 frame.set_draw_handler(draw)
 
-clock = simplegui.create_timer(100, update)
+frame.add_button("Start", start, 100)
+frame.add_button("Stop",  stop,  100)
+frame.add_button("Reset", reset, 100)
+
+timer = simplegui.create_timer(100, tick)
 
 frame.start()
-btn_reset()
